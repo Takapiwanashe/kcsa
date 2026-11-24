@@ -1,0 +1,179 @@
+# 1. Namespace + Pod Security Standards (PSS)
+# Enforces 'baseline' to prevent privilege escalation while auditing 'restricted'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudops-team
+  labels:
+    tenant: cloudops-team
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+# 2. RBAC: Scoped Role & RoleBinding
+# Grants workload management inside the namespace without allowing guardrail tampering
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cloudops-team-engineer
+  namespace: cloudops-team
+rules:
+  - apiGroups: ["", "apps", "batch", "networking.k8s.io"]
+    resources:
+      - pods
+      - pods/log
+      - pods/exec
+      - deployments
+      - replicasets
+      - statefulsets
+      - daemonsets
+      - jobs
+      - cronjobs
+      - services
+      - configmaps
+      - secrets
+      - persistentvolumeclaims
+      - ingresses
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["resourcequotas", "limitranges", "events"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cloudops-team-engineers-binding
+  namespace: cloudops-team
+subjects:
+  - kind: Group
+    name: cloudops-team
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: cloudops-team-engineer
+  apiGroup: rbac.authorization.k8s.io
+---
+# 3A. ResourceQuota (Prevent "Noisy Neighbor" at Namespace Level)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: cloudops-team-quota
+  namespace: cloudops-team
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    pods: "40"
+    persistentvolumeclaims: "10"
+    services.loadbalancers: "2"
+---
+# 3B. LimitRange (Default & Max Bounds per Container)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cloudops-team-limits
+  namespace: cloudops-team
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      max:
+        cpu: "4"
+        memory: 8Gi
+      min:
+        cpu: 50m
+        memory: 64Mi
+---
+# 4. NetworkPolicy (Basic Traffic Isolation)
+# Allows intra-namespace traffic and DNS egress; blocks cross-namespace ingress by default
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cloudops-team-isolation
+  namespace: cloudops-team
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from pods within the same namespace
+    - from:
+        - podSelector: {}
+    # Allow traffic from an ingress controller namespace (if applicable)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+  egress:
+    # Allow intra-namespace traffic
+    - to:
+        - podSelector: {}
+    # Allow CoreDNS resolution in kube-system
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow outbound internet/external API traffic (excludes cluster pod/service CIDRs if needed)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+---
+# 5. Workload Placement Separation (Labels, NodeSelector, Tolerations)
+# Example workload demonstrating dedicated node pool scheduling
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-cloudops-worker
+  namespace: cloudops-team
+  labels:
+    app: sample-worker
+    tenant: cloudops-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample-worker
+  template:
+    metadata:
+      labels:
+        app: sample-worker
+        tenant: cloudops-team
+    spec:
+      nodeSelector:
+        workload-tier: general-ops
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "cloudops"
+          effect: "NoSchedule"
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep 3600"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
