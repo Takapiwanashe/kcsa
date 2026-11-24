@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: kcsa-dev
 resources:
 - ../../base
+- peer-authentication.yaml
 patches:
 - patch: |-
     apiVersion: apps/v1
