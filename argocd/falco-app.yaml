@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.io
+    repoURL: https://falcosecurity.github.io/charts
     chart: falco
     targetRevision: 9.2.2
     helm:
@@ -32,7 +32,7 @@ spec:
               priority: CRITICAL
               tags: [kcsa, prod, network]
   destination:
-    server: https://default.svc
+    server: https://kubernetes.default.svc
     namespace: falco
   syncPolicy:
     automated:
