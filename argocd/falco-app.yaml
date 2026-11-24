@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.io
     chart: falco
-    targetRevision: ">=4.21.0"
+    targetRevision: 9.2.2
     helm:
       releaseName: falco
       valuesObject:
