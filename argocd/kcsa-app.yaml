@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kcsa-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:Takapiwanashe/kcsa.git
+    targetRevision: main
+    path: manifests # Update if your YAML manifests are in a specific subfolder
+  destination:
+    server: https://default.svc
+    namespace: kcsa-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
