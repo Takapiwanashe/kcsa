@@ -4,40 +4,57 @@ metadata:
   name: kcsa-environments
   namespace: argocd
 spec:
-  goTemplate: true
-  goTemplateOptions: ["missingkey=error"]
   generators:
   - list:
       elements:
       - env: dev
         namespace: kcsa-dev
-        autoSync: "true"
       - env: qa
         namespace: kcsa-qa
-        autoSync: "true"
       - env: staging
         namespace: kcsa-staging
-        autoSync: "true"
-      - env: prod
-        namespace: kcsa-prod
-        autoSync: "false"
   template:
     metadata:
-      name: 'kcsa-{{.env}}'
+      name: 'kcsa-{{env}}'
     spec:
       project: default
       source:
         repoURL: git@github.com:Takapiwanashe/kcsa.git
         targetRevision: main
-        path: 'environments/{{.env}}'
+        path: 'environments/{{env}}'
       destination:
         server: https://default.svc
-        namespace: '{{.namespace}}'
+        namespace: '{{namespace}}'
       syncPolicy:
-        {{- if eq .autoSync "true" }}
         automated:
           prune: true
           selfHeal: true
-        {{- end }}
+        syncOptions:
+        - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kcsa-prod-env
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - env: prod
+        namespace: kcsa-prod
+  template:
+    metadata:
+      name: 'kcsa-{{env}}'
+    spec:
+      project: default
+      source:
+        repoURL: git@github.com:Takapiwanashe/kcsa.git
+        targetRevision: main
+        path: 'environments/{{env}}'
+      destination:
+        server: https://default.svc
+        namespace: '{{namespace}}'
+      syncPolicy:
         syncOptions:
         - CreateNamespace=true
