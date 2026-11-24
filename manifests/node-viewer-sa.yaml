@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-viewer-sa
+  namespace: kcsa-dev
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-node-viewer
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: global-node-viewer-binding
+subjects:
+- kind: ServiceAccount
+  name: node-viewer-sa
+  namespace: kcsa-dev # Even though the binding is cluster-wide, a ServiceAccount always lives in a namespace
+roleRef:
+  kind: ClusterRole
+  name: cluster-node-viewer
+  apiGroup: rbac.authorization.k8s.io
+
