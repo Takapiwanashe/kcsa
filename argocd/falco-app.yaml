@@ -1,0 +1,43 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.io
+    chart: falco
+    targetRevision: 4.16.0
+    helm:
+      releaseName: falco
+      valuesObject:
+        driver:
+          kind: modern_ebpf
+        tty: true
+        collectors:
+          kubernetes:
+            enabled: true
+        # Optional: Add custom Falco rules declaratively right inside your GitOps manifest!
+        customRules:
+          custom-kcsa-rules.yaml: |-
+            - rule: Unauthorized Curl or Wget in Prod
+              desc: Detect outbound network download tools executed inside kcsa-prod pods
+              condition: >
+                spawned_process and container
+                and k8s.ns.name = "kcsa-prod"
+                and proc.name in (curl, wget, nc)
+              output: >
+                Network utility executed in kcsa-prod
+                (user=%user.name pod=%k8s.pod.name container=%container.name cmdline=%proc.cmdline)
+              priority: CRITICAL
+              tags: [kcsa, prod, network]
+  destination:
+    server: https://default.svc
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
