@@ -4,6 +4,8 @@ metadata:
   name: kcsa-environments
   namespace: argocd
 spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
   generators:
   - list:
       elements:
@@ -18,19 +20,24 @@ spec:
         autoSync: "true"
       - env: prod
         namespace: kcsa-prod
-        autoSync: "false" # Require manual approval/sync click in UI for prod!
+        autoSync: "false"
   template:
     metadata:
-      name: 'kcsa-{{env}}'
+      name: 'kcsa-{{.env}}'
     spec:
       project: default
       source:
         repoURL: git@github.com:Takapiwanashe/kcsa.git
         targetRevision: main
-        path: 'environments/{{env}}' # Looks for environments/dev, environments/qa, etc.
+        path: 'environments/{{.env}}'
       destination:
-        server: https://kubernetes.default.svc
-        namespace: '{{namespace}}'
+        server: https://default.svc
+        namespace: '{{.namespace}}'
       syncPolicy:
+        {{- if eq .autoSync "true" }}
+        automated:
+          prune: true
+          selfHeal: true
+        {{- end }}
         syncOptions:
         - CreateNamespace=true
