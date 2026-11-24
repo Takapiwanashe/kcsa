@@ -3,6 +3,9 @@ kind: Kustomization
 namespace: kcsa-prod
 resources:
 - ../../base
+images:
+- name: takapiwanashe/app-multi
+  newTag: v1.0.0
 patches:
 - patch: |-
     apiVersion: apps/v1
