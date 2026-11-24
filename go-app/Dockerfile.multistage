@@ -1,0 +1,15 @@
+FROM golang:1.21 AS builder
+
+WORKDIR /app
+
+COPY main.go .
+
+RUN go mod init myapp && \
+    go build -o server main.go
+
+FROM alpine:latest
+
+COPY --from=builder /app/server /usr/local/bin/server
+
+CMD ["server"]
+

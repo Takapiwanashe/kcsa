@@ -1,0 +1,21 @@
+# --- STAGE 1: Build the artifact ---
+FROM golang:1.21 AS builder
+
+WORKDIR /app
+COPY main.go .
+
+# Build a static binary (CGO_ENABLED=0 ensures it has no external dependencies)
+RUN go mod init myapp && \
+    CGO_ENABLED=0 go build -o server main.go
+
+# --- STAGE 2: Run the artifact ---
+# We switch to Alpine Linux 
+FROM alpine:latest
+
+WORKDIR /root/
+
+# MAGIC STEP: We copy ONLY the binary from the 'builder' stage
+COPY --from=builder /app/server .
+
+# Run the binary
+CMD ["./server"]

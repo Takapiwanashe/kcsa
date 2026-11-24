@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-app
+  namespace: kcsa-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-app
+  template:
+    metadata:
+      labels:
+        app: go-app
+    spec:
+      containers:
+        - name: go-app-container
+          image: takapiwanashe/app-multi
+      imagePullSecrets:
+        - name: dockerhub-secret
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-app-service
+  namespace: kcsa-dev
+spec:
+  type: NodePort # Change to NodePort if running locally without a cloud load balancer
+  selector:
+    app: go-app      # Must match the label in your Deployment
+  ports:
+    - protocol: TCP
+      port: 80       # The port you will access externally
+      targetPort: 8080 # The port your container listens on

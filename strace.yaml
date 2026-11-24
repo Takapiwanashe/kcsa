@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-app
+  namespace: kcsa-dev
+spec:
+  shareProcessNamespace: true
+  containers:
+  - name: app
+    image: nginx
+  - name: debugger
+    image: ubuntu
+    command: ["sleep", "3600"]
+
