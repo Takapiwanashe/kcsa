@@ -1,0 +1,40 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-local-storage
+provisioner: rancher.io/local-path # On AWS EKS use aws.com; on Azure use azure.com
+reclaimPolicy: Retain              # Options: Delete (default) or Retain
+volumeBindingMode: WaitForFirstConsumer # Delays PV creation until a Pod using the PVC is scheduled
+allowVolumeExpansion: true         # Allows resizing the PVC later without recreating it
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-data-pvc
+  namespace: kcsa-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-local-storage
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: storage-demo-pod
+  namespace: kcsa-dev
+spec:
+  containers:
+  - name: app
+    image: alpine
+    command: ["sh", "-c", "echo 'Persisted data' > /data/hello.txt && sleep 3600"]
+    volumeMounts:
+    - name: data-vol
+      mountPath: /data
+  volumes:
+  - name: data-vol
+    persistentVolumeClaim:
+      claimName: app-data-pvc
+
