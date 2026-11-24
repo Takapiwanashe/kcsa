@@ -4,8 +4,10 @@ namespace: kcsa-prod
 resources:
 - ../../base
 images:
-- name: takapiwanashe/app-multi
-  newTag: v1.0.0
+- digest: sha256:d98cbd3c9c17849dc00f1bed3a9c43bd168e768b2618cee491fd7dccc4309014
+  name: takapiwanashe/app-multi
+  newName: takapiwanashe/app-multi
+  newTag: v1.0.1
 patches:
 - patch: |-
     apiVersion: apps/v1
