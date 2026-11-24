@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://falcosecurity.github.io/charts
+    repoURL: https://github.io
     chart: falco
-    targetRevision: 4.16.0
+    targetRevision: ">=4.21.0"
     helm:
       releaseName: falco
       valuesObject:
@@ -18,13 +18,12 @@ spec:
         collectors:
           kubernetes:
             enabled: true
-        # Optional: Add custom Falco rules declaratively right inside your GitOps manifest!
         customRules:
           custom-kcsa-rules.yaml: |-
             - rule: Unauthorized Curl or Wget in Prod
               desc: Detect outbound network download tools executed inside kcsa-prod pods
               condition: >
-                spawned_process and container
+                evt.type = execve and evt.dir = < and container.id != host
                 and k8s.ns.name = "kcsa-prod"
                 and proc.name in (curl, wget, nc)
               output: >
@@ -33,7 +32,7 @@ spec:
               priority: CRITICAL
               tags: [kcsa, prod, network]
   destination:
-    server: https://kubernetes.default.svc
+    server: https://default.svc
     namespace: falco
   syncPolicy:
     automated:
