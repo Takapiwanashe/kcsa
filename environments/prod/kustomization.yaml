@@ -19,7 +19,7 @@ patches:
             seccompProfile:
               type: RuntimeDefault
           containers:
-          - name: go-app
+          - name: go-app-container
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
