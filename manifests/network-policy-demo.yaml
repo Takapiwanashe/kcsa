@@ -4,37 +4,28 @@ metadata:
   name: go-app-netpol
   namespace: kcsa-dev
 spec:
-  # 1. Target Pods: Applies to pods labeled app=go-app in kcsa-dev
   podSelector:
     matchLabels:
       app: go-app
   policyTypes:
     - Ingress
     - Egress
-
-  # 2. INGRESS RULES (Incoming traffic to go-app)
   ingress:
     - from:
-        # RULE A (OR): Allow from pods with role=frontend in the SAME namespace (kcsa-dev)
+        # Allow pods in kcsa-dev (so mtls-tester can reach go-app)
+        - podSelector: {}
         - podSelector:
             matchLabels:
               role: frontend
-
-        # RULE B (OR): Allow from ANY pod in namespaces labeled environment=qa
         - namespaceSelector:
             matchLabels:
               environment: qa
-
-        # RULE C (AND): Allow ONLY from pods labeled app=prometheus INSIDE namespaces labeled environment=monitoring
-        # (Notice there is NO hyphen before podSelector—both are part of a single list item!)
         - namespaceSelector:
             matchLabels:
               environment: monitoring
           podSelector:
             matchLabels:
               app: prometheus
-
-        # RULE D (OR): Allow from external CIDR 192.168.1.0/24, excluding 192.168.1.50/32
         - ipBlock:
             cidr: 192.168.1.0/24
             except:
@@ -42,10 +33,8 @@ spec:
       ports:
         - protocol: TCP
           port: 8080
-
-  # 3. EGRESS RULES (Outgoing traffic from go-app)
   egress:
-    # Allow DNS resolution (Required! Without this, pod cannot resolve service names)
+    # Allow DNS resolution
     - to:
         - namespaceSelector:
             matchLabels:
@@ -58,8 +47,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-
-    # Allow outbound HTTPS traffic to external IPs, blocking private RFC1918 cluster/internal networks
+    # Allow Istio sidecar (istio-proxy) to reach istiod for xDS config and mTLS certs
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+      ports:
+        - protocol: TCP
+          port: 15012
+        - protocol: TCP
+          port: 15017
+    # Allow external HTTPS traffic
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
@@ -70,4 +68,3 @@ spec:
       ports:
         - protocol: TCP
           port: 443
-
