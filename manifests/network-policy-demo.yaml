@@ -1,0 +1,73 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: go-app-netpol
+  namespace: kcsa-dev
+spec:
+  # 1. Target Pods: Applies to pods labeled app=go-app in kcsa-dev
+  podSelector:
+    matchLabels:
+      app: go-app
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # 2. INGRESS RULES (Incoming traffic to go-app)
+  ingress:
+    - from:
+        # RULE A (OR): Allow from pods with role=frontend in the SAME namespace (kcsa-dev)
+        - podSelector:
+            matchLabels:
+              role: frontend
+
+        # RULE B (OR): Allow from ANY pod in namespaces labeled environment=qa
+        - namespaceSelector:
+            matchLabels:
+              environment: qa
+
+        # RULE C (AND): Allow ONLY from pods labeled app=prometheus INSIDE namespaces labeled environment=monitoring
+        # (Notice there is NO hyphen before podSelector—both are part of a single list item!)
+        - namespaceSelector:
+            matchLabels:
+              environment: monitoring
+          podSelector:
+            matchLabels:
+              app: prometheus
+
+        # RULE D (OR): Allow from external CIDR 192.168.1.0/24, excluding 192.168.1.50/32
+        - ipBlock:
+            cidr: 192.168.1.0/24
+            except:
+              - 192.168.1.50/32
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  # 3. EGRESS RULES (Outgoing traffic from go-app)
+  egress:
+    # Allow DNS resolution (Required! Without this, pod cannot resolve service names)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # Allow outbound HTTPS traffic to external IPs, blocking private RFC1918 cluster/internal networks
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+
