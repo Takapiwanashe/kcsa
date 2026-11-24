@@ -1,0 +1,45 @@
+cat <<EOF > .gitignore
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Secrets, Keys, and Kubeconfigs (Prevent accidental leaks)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*secret*.yaml
+*secret*.yml
+kubeconfig*
+*.kubeconfig
+
+# Go build binaries & test artifacts (for go-app/)
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go-app/go-app
+/bin/
+/dist/
+vendor/
+
+# IDE & Editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment & Temporary files
+.env
+.env.*
+*.log
+tmp/
+EOF
+
