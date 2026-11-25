@@ -3,6 +3,19 @@ kind: Application
 metadata:
   name: kcsa-app
   namespace: argocd
+  annotationd:
+      # 1. Define the image alias and repository to watch
+    argocd-image-updater.argoproj.io/image-list: app=takapiwanashe/app-multi
+
+    # 2. Update strategy:
+    # Use 'semver' to automatically bump tags (e.g., v1.0.x) AND resolve their digest
+    argocd-image-updater.argoproj.io/app.update-strategy: semver
+    argocd-image-updater.argoproj.io/app.allow-tags: regexp:^v[0-9]+\.[0-9]+\.[0-9]+$
+
+    # 3. Write changes back to Git (required to modify kustomization.yaml)
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
+    argocd-image-updater.argoproj.io/git-branch: main
 spec:
   project: default
   source:
