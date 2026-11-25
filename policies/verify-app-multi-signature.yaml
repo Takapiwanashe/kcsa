@@ -1,0 +1,23 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-app-multi-signature
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: check-cosign-signature
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+              namespaces: ["kcsa-prod"]
+      verifyImages:
+        - imageReferences: ["docker.io/takapiwanashe/app-multi*"]
+          attestors:
+            - entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEqu48YgdqOZyD9nL5gNLqo1tiiFVX
+                      qgrQbaecY2DygIYd177N5YJRJ+PQfTuW30QGNCQGI61YNrzDeSIRAD916w==
+                      -----END PUBLIC KEY-----
